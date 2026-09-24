@@ -158,7 +158,9 @@ REAPER itself. If something doesn't work, the most useful thing to report is:
 
 ## For developers
 
-See [CLAUDE.md](CLAUDE.md) for the design and the JSFX rules it follows, and
+See [CLAUDE.md](CLAUDE.md) for the design and the JSFX rules it follows,
+[docs/adr/](docs/adr/README.md) for why the big decisions were made,
+[docs/sessions/](docs/sessions/) for a log of each working session, and
 [tests/README.md](tests/README.md) for running the tests:
 
 ```

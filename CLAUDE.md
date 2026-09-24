@@ -18,6 +18,8 @@ Scripts/MIDI Production Center/
   MPC - Load selected MIDI item.lua
   MPC - Loader (background).lua  makes the in-plug-in LOAD ITEM button work
 tests/                          EEL2 interpreter + suites (see tests/README.md)
+docs/adr/                       architecture decision records (index in README.md)
+docs/sessions/                  one log per working day, YYYY-MM-DD.md
 ```
 
 The folder names mirror REAPER's resource path so users copy `Effects/` and
@@ -38,14 +40,32 @@ If you use an EEL2 feature the interpreter doesn't know, teach it
 declaration order and argument counts (see below), which REAPER enforces at
 compile time and the interpreter otherwise wouldn't.
 
+## Project records - keep these up to date
+
+- **Session log** (`docs/sessions/YYYY-MM-DD.md`): at the end of each working
+  session, write (or add to) the file for that day: goal, what was done,
+  decisions, verification (test results, and whether it was tried in REAPER),
+  open items / next steps. Start a session by reading the most recent log.
+- **Architecture decision records** (`docs/adr/NNNN-title.md`): add one for any
+  decision that would be expensive to reverse or that a future reader would
+  question - technology, file/data formats, the gmem protocol, the
+  timing/scheduling model, what an effect *means* musically. Use the template
+  in `docs/adr/README.md` and add it to the index there. Never rewrite an
+  accepted ADR; supersede it with a new one and update the old one's status.
+- Small calls go in the session log, not an ADR.
+
+## Current status
+
+First version, committed 2026-09-24. Both suites pass (118 plug-in checks, 22
+loader checks). **Never yet run inside REAPER** - see the last section and
+`docs/sessions/2026-09-24.md` for what to check first.
+
 ## Why JSFX (not CLAP)
 
-Chosen deliberately: no compiler, no per-OS builds or code signing, loads
-instantly in REAPER on every platform, sample-accurate MIDI in `@block`, and a
-custom UI via `@gfx`. The cost is that JSFX cannot open `.mid` files or accept
-drag-and-drop, which is why phrases arrive by live sampling or the loader
-scripts (gmem). A CLAP port would only be worth it for file drops or other
-hosts.
+See [ADR 0001](docs/adr/0001-jsfx-not-clap.md). In short: no compiler, builds
+or signing, sample-accurate MIDI and a custom UI built in. The cost is that
+JSFX can't open `.mid` files or accept drag-and-drop, hence live sampling and
+the gmem loader scripts ([ADR 0002](docs/adr/0002-phrase-loading.md)).
 
 ## JSFX / EEL2 rules this code relies on
 
@@ -84,6 +104,10 @@ hosts.
   (`u_changed()`). Call it after every user edit.
 
 ## Architecture
+
+The reasoning behind this section is in the ADRs: saving state (0003), effect
+meanings (0004), per-voice play lists (0005), the scheduler (0006) and the
+test approach (0007).
 
 **Phrase** (`SRC`, ≤ 8192 notes: start, length in beats, pitch, vel, chan),
 sorted by start then pitch. Arrives from the demo, live sampling
