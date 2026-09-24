@@ -24,16 +24,19 @@ function mpc_consts()
   // chop markers (beats). MARK_UI is edited by the panel, MARK is the audio
   // thread's sorted copy (the two run on different threads).
   MAX_MARK = 256;
-  // slices: 0..63 are chops, 64 is always the whole phrase
-  MAX_SLICES = 64; WHOLE = 64; SL_ST = 8;
-  SF_S = 0; SF_E = 1; SF_LO = 2; SF_HI = 3; SF_FO = 4; SF_FN = 5; SF_RO = 6; SF_RN = 7;
-  // play lists built per slice: q (beats from slice start), len, pitch, vel, chan
-  LIST_MAX = 40000; L_ST = 5;
-  // pads: 4 banks x 16
+  // slices: the current chops (start, end in beats), at most 64
+  MAX_SLICES = 64; SL_ST = 2; SF_S = 0; SF_E = 1;
+  NO_SLICE = 64;                        // pad label: empty
+  // play-list entry: q (beats from the region start), len, pitch, vel, chan
+  L_ST = 5;
+  // pads: 4 banks x 16. A pad holds its OWN region of the phrase (PF_S..PF_E,
+  // beats), set by "transfer to pads" or by dropping a slice on it, so
+  // re-chopping never changes a pad by itself. PF_SLICE is only a label: the
+  // slice it came from (-1 = whole phrase, NO_SLICE = empty).
   MAX_PADS = 64; P_ST = 16;
   PF_SLICE = 0; PF_NOTE = 1; PF_MODE = 2; PF_TRANS = 3; PF_TAPE = 4; PF_STRETCH = 5;
   PF_FIT = 6; PF_LEVEL = 7; PF_VSENS = 8; PF_REV = 9; PF_CHOKE = 10; PF_POLY = 11;
-  PF_FX = 12; PF_CHAN = 13;
+  PF_FX = 12; PF_CHAN = 13; PF_S = 14; PF_E = 15;
   MODE_ONESHOT = 0; MODE_GATE = 1; MODE_LOOP = 2; MODE_TOGGLE = 3;
   // voices, each with a private (warped) copy of its slice's play list
   MAX_V = 32; V_ST = 32; VL_MAX = 4096;
@@ -52,9 +55,8 @@ function mpc_consts()
   MARK    = SRC + MAX_NOTES * N_ST;
   MARK_UI = MARK + MAX_MARK;
   SLICE   = MARK_UI + MAX_MARK;
-  CHOPS   = SLICE + (MAX_SLICES + 1) * SL_ST;
-  LIST    = CHOPS + MAX_SLICES + 8;
-  PAD     = LIST + LIST_MAX * L_ST;
+  CHOPS   = SLICE + MAX_SLICES * SL_ST;
+  PAD     = CHOPS + MAX_SLICES + 8;
   PADCLIP = PAD + MAX_PADS * P_ST;               // copy / paste buffer
   VOICE   = PADCLIP + P_ST;
   VLIST   = VOICE + MAX_V * V_ST;
@@ -179,7 +181,7 @@ function mpc_pad_default(p) local(a)
 (
   a = PAD + p * P_ST;
   memset(a, 0, P_ST);
-  a[PF_SLICE] = p;                 // pad n plays slice n
+  a[PF_SLICE] = NO_SLICE;          // empty until a transfer fills it
   a[PF_NOTE] = min(36 + p, 127);   // note 36 upwards, chromatic
   a[PF_MODE] = MODE_ONESHOT;
   a[PF_STRETCH] = 100;
@@ -208,19 +210,47 @@ function mpc_src_add(s, l, p, v, c) local(a)
   );
 );
 
+// Longest note (so region scans know how far back a held note can start);
+// returns the latest note end.
+function mpc_src_stats() local(i, e)
+(
+  e = 0; src_maxlen = 0; i = 0;
+  loop(src_n,
+    e = max(e, SRC[i * N_ST] + SRC[i * N_ST + 1]);
+    src_maxlen = max(src_maxlen, SRC[i * N_ST + 1]);
+    i += 1;
+  );
+  e;
+);
+
+// First phrase index whose start is >= x (the phrase is sorted by start).
+function mpc_src_find(x) local(lo, hi, mid)
+(
+  lo = 0; hi = src_n;
+  while (lo < hi) (
+    mid = floor((lo + hi) / 2);
+    SRC[mid * N_ST] < x - 0.0000001 ? lo = mid + 1 : hi = mid;
+  );
+  lo;
+);
+
+// Notes starting in [S, E).
+function mpc_count_in(S, E) ( mpc_src_find(E - EPS) - mpc_src_find(S - EPS); );
+
 // Sorts the phrase by start (then pitch), fills in a missing length and tells
-// everything downstream that the source changed.
-function mpc_src_finalize() local(i, e)
+// everything downstream that the source changed. A new phrase is transferred
+// to the pads automatically once it has been chopped.
+function mpc_src_finalize() local(e)
 (
   mpc_sort(SRC, src_n, N_ST, 0, 2);
-  e = 0; i = 0;
-  loop(src_n, e = max(e, SRC[i * N_ST] + SRC[i * N_ST + 1]); i += 1; );
+  e = mpc_src_stats();
   src_len <= EPS ? src_len = ceil(e - EPS);
   src_len <= EPS ? src_len = 4;
   src_tempo < 1 ? src_tempo = 120;
   src_tsn < 1 ? src_tsn = 4;
   src_tsd < 1 ? src_tsd = 4;
   src_rev += 1;
+  xfer_pending = 1;
 );
 
 // A two-bar groove so the plug-in does something the moment it is loaded:
@@ -313,51 +343,71 @@ function mpc_chop_starts() local(n, i, j, s, str, maxs, thr, last, g, k, cnt, m)
   n;
 );
 
-// Builds the forward and reverse play lists for slice si. A list entry's q is
-// its position in beats from the slice start, in playing order; notes are
-// clipped to the slice so a chop never rings past its end.
-function mpc_build_lists(si) local(sl, S, E, L, i, a, b, s, e, cs, ce, fo, ro, cnt, lo, hi, k)
+// Writes the notes of region [S, E) to dst as a play list (at most maxn
+// entries): q = beats from S in playing order, notes clipped to the region,
+// held notes crossing S included when "Held notes" is on. Reversed, a note
+// [q, q+len] plays at L - (q + len), so its length survives. Returns the
+// count; rl_lo / rl_hi get the pitch range.
+function mpc_region_list(dst, maxn, S, E, rev) local(i, a, b, s, e, cs, ce, n, L)
 (
-  sl = SLICE + si * SL_ST;
-  S = sl[SF_S]; E = sl[SF_E]; L = E - S;
-  fo = list_used; cnt = 0; lo = 128; hi = -1;
-  i = 0;
-  while (i < src_n && SRC[i * N_ST] < E - EPS) (
+  n = 0; rl_lo = 128; rl_hi = -1; L = E - S;
+  i = mpc_src_find(S - src_maxlen - EPS);
+  while (i < src_n && SRC[i * N_ST] < E - EPS && n < maxn) (
     a = SRC + i * N_ST;
     s = a[0]; e = s + a[1];
-    (s >= S - EPS || (p_tails && e > S + TAIL_MIN)) && list_used < LIST_MAX ? (
+    s >= S - EPS || (p_tails && e > S + TAIL_MIN) ? (
       cs = max(s, S); ce = min(e, E);
       ce < cs + MINLEN ? ce = cs + MINLEN;
-      b = LIST + list_used * L_ST;
-      b[0] = cs - S; b[1] = ce - cs; b[2] = a[2]; b[3] = a[3]; b[4] = a[4];
-      lo = min(lo, a[2]); hi = max(hi, a[2]);
-      list_used += 1; cnt += 1;
+      b = dst + n * L_ST;
+      b[0] = rev ? max(L - (ce - S), 0) : cs - S;
+      b[1] = ce - cs; b[2] = a[2]; b[3] = a[3]; b[4] = a[4];
+      rl_lo = min(rl_lo, a[2]); rl_hi = max(rl_hi, a[2]);
+      n += 1;
     );
     i += 1;
   );
-  sl[SF_FO] = fo; sl[SF_FN] = cnt;
-  cnt == 0 ? ( lo = 60; hi = 60; );
-  sl[SF_LO] = lo; sl[SF_HI] = hi;
+  rev ? mpc_sort(dst, n, L_ST, 0, 2);
+  n == 0 ? ( rl_lo = 60; rl_hi = 60; );
+  n;
+);
 
-  // Reverse: a note [q, q+len] plays at L - (q + len), so its length survives.
-  ro = list_used;
-  ro + cnt <= LIST_MAX ? (
-    k = 0;
-    loop(cnt,
-      a = LIST + (fo + k) * L_ST; b = LIST + (ro + k) * L_ST;
-      b[0] = max(L - a[0] - a[1], 0); b[1] = a[1]; b[2] = a[2]; b[3] = a[3]; b[4] = a[4];
-      k += 1;
-    );
-    list_used += cnt;
-    mpc_sort(LIST + ro * L_ST, cnt, L_ST, 0, 2);
-    sl[SF_RO] = ro; sl[SF_RN] = cnt;
+// ---------------------------------------------------------------------------
+// Pad regions and "transfer to pads"
+// ---------------------------------------------------------------------------
+function mpc_pad_has(p) ( PAD[p * P_ST + PF_E] > PAD[p * P_ST + PF_S] + EPS; );
+
+// Gives pad p the region of slice si (-1 = whole phrase, anything past the
+// chops = empty).
+function mpc_pad_set_slice(p, si) local(a)
+(
+  a = PAD + p * P_ST;
+  si = si | 0;
+  si < 0 ? (
+    a[PF_SLICE] = -1; a[PF_S] = 0; a[PF_E] = src_len;
+  ) : si < slice_n ? (
+    a[PF_SLICE] = si; a[PF_S] = SLICE[si * SL_ST + SF_S]; a[PF_E] = SLICE[si * SL_ST + SF_E];
   ) : (
-    sl[SF_RO] = fo; sl[SF_RN] = 0;
+    a[PF_SLICE] = NO_SLICE; a[PF_S] = 0; a[PF_E] = 0;
   );
 );
 
-// Re-cuts the phrase. Voices keep their own copies of their lists, so this is
-// safe to run while pads are sounding.
+// Fills the pads from `first` onwards with the current slices, in order,
+// carrying on into the next banks if needed. Pads after the last one filled
+// are emptied to the end of its bank (to pad 64 if `all`). Other pad settings
+// are kept. Returns how many slices went onto pads.
+function mpc_transfer(first, all) local(p, i, last)
+(
+  first = mpc_clamp(first | 0, 0, MAX_PADS - 1);
+  p = first; i = 0;
+  while (i < slice_n && p < MAX_PADS) ( mpc_pad_set_slice(p, i); p += 1; i += 1; );
+  last = all ? MAX_PADS : min(max(ceil(p / 16), floor(first / 16) + 1) * 16, MAX_PADS);
+  while (p < last) ( mpc_pad_set_slice(p, NO_SLICE); p += 1; );
+  xfer_chop_rev = chop_rev;
+  i;
+);
+
+// Re-cuts the phrase into SLICE. Pads keep their own regions, so this never
+// changes what a pad plays until the next transfer.
 function mpc_chop() local(n, i, sl)
 (
   // the audio thread's sorted copy of the panel's markers
@@ -366,7 +416,7 @@ function mpc_chop() local(n, i, sl)
   mpc_sort(MARK, mark_n, 1, 0, 0);
 
   n = mpc_chop_starts();
-  slice_n = n;
+  slice_n = min(n, MAX_SLICES);
   i = 0;
   loop(n,
     sl = SLICE + i * SL_ST;
@@ -374,14 +424,17 @@ function mpc_chop() local(n, i, sl)
     sl[SF_E] = i + 1 < n ? CHOPS[i + 1] : src_len;
     i += 1;
   );
-  sl = SLICE + WHOLE * SL_ST;
-  sl[SF_S] = 0; sl[SF_E] = src_len;
-
-  list_used = 0;
-  i = 0;
-  loop(n, mpc_build_lists(i); i += 1; );
-  mpc_build_lists(WHOLE);
   chop_rev += 1;
+
+  // projects saved by version 1 stored a slice number per pad, not a region
+  pads_migrate ? (
+    i = 0;
+    loop(MAX_PADS, mpc_pad_set_slice(i, PAD[i * P_ST + PF_SLICE]); i += 1; );
+    pads_migrate = 0;
+    xfer_chop_rev = chop_rev;
+  );
+  // a new phrase goes straight onto the pads
+  xfer_pending ? ( mpc_transfer(0, 1); xfer_pending = 0; );
 );
 
 // Everything the slices depend on. Compared field by field each block so the
@@ -397,13 +450,6 @@ function mpc_chop_if_needed() local(changed)
     chop_force = 0;
     mpc_chop();
   );
-);
-
-// Slice a pad plays, or -1 if it has nothing to play.
-function mpc_pad_slice(p) local(s)
-(
-  s = PAD[p * P_ST + PF_SLICE] | 0;
-  s < 0 ? WHOLE : s < slice_n ? s : -1;
 );
 
 // ---------------------------------------------------------------------------
@@ -422,6 +468,7 @@ function mpc_serialize()
       file_var(0, src_tsn); file_var(0, src_tsd);
       ser_n > 0 ? file_mem(0, SRC, ser_n * N_ST);
       src_n = ser_n;
+      mpc_src_stats();
       file_var(0, ser_m);
       ser_m = mpc_clamp(ser_m | 0, 0, MAX_MARK);
       ser_m > 0 ? file_mem(0, MARK_UI, ser_m);
@@ -429,12 +476,16 @@ function mpc_serialize()
       file_mem(0, PAD, MAX_PADS * P_ST);
       file_var(0, ui_pad); file_var(0, ui_tab); file_var(0, ui_fx);
       file_string(0, #src_name);
+      ser_ver == 1 ? pads_migrate = 1;
+      // the saved pads win over any automatic transfer queued before this
+      // load (e.g. of the demo phrase, if @init ran first)
+      xfer_pending = 0;
       pads_ok = 1; src_ok = 1;
       src_rev += 1; mark_rev += 1;
     );
   ) : (
     // save
-    ser_ver = 1; ser_n = src_n; ser_m = mark_ui_n;
+    ser_ver = 2; ser_n = src_n; ser_m = mark_ui_n;
     file_var(0, ser_ver);
     file_var(0, ser_n);
     file_var(0, src_len); file_var(0, src_tempo);

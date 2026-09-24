@@ -56,9 +56,11 @@ compile time and the interpreter otherwise wouldn't.
 
 ## Current status
 
-First version, committed 2026-09-24. Both suites pass (118 plug-in checks, 22
-loader checks). **Never yet run inside REAPER** - see the last section and
-`docs/sessions/2026-09-24.md` for what to check first.
+Early version (2026-09-24). Both suites pass (137 plug-in checks, 22 loader
+checks). **First REAPER try: the owner couldn't get it to play anything; cause
+unknown.** AUDIO / IN / OUT status lights and "empty pad" messages were added
+to pin it down - ask which lights come on before guessing. See
+`docs/sessions/2026-09-24.md`.
 
 ## Why JSFX (not CLAP)
 
@@ -106,8 +108,8 @@ the gmem loader scripts ([ADR 0002](docs/adr/0002-phrase-loading.md)).
 ## Architecture
 
 The reasoning behind this section is in the ADRs: saving state (0003), effect
-meanings (0004), per-voice play lists (0005), the scheduler (0006) and the
-test approach (0007).
+meanings (0004), per-voice play lists (0005), the scheduler (0006), the test
+approach (0007) and pad regions / transfer to pads (0008).
 
 **Phrase** (`SRC`, ≤ 8192 notes: start, length in beats, pitch, vel, chan),
 sorted by start then pitch. Arrives from the demo, live sampling
@@ -115,18 +117,27 @@ sorted by start then pitch. Arrives from the demo, live sampling
 `mpc_src_finalize()`, which bumps `src_rev`.
 
 **Chopping.** `mpc_chop_if_needed()` compares every input (phrase revision,
-marker revision, chop sliders) and re-runs `mpc_chop()`: slice starts
-(`CHOPS`), then per-slice **play lists** in `LIST` - forward and reverse,
-positions relative to the slice start, notes clipped to the slice, held notes
-included when "Held notes" is on. Slice 64 is always the whole phrase.
-Transient chopping groups notes starting within `ONSET_WIN` into a hit whose
-strength is summed velocity; sensitivity is the fraction of the strongest hit
-a hit needs.
+marker revision, chop sliders) and re-runs `mpc_chop()`, which only computes
+the slices (`SLICE`: start/end in beats, ≤ 64). Transient chopping groups notes
+starting within `ONSET_WIN` into a hit whose strength is summed velocity;
+sensitivity is the fraction of the strongest hit a hit needs.
 
-**Voices** (32). A trigger copies its slice's list into the voice's own
-`VLIST` region, applying swing and timing-compression there (they move notes
-*earlier* as well as later, which can't be done once a note's time has come).
-Because voices own their lists, re-chopping never disturbs sounding pads.
+**Pads hold their own regions** (`PF_S`..`PF_E`, beats); `PF_SLICE` is just a
+label (-1 whole phrase, `NO_SLICE` = 64 empty). `mpc_transfer(first, all)`
+copies the current slices onto pads from `first`, emptying the rest of that
+bank. It runs automatically for a new phrase (`xfer_pending`, set by
+`mpc_src_finalize`, cleared by a project load so saved pads win) and on
+request from the panel (`ui_req_xfer`, handled in `@block` after the chop).
+Re-chopping never changes a pad; `xfer_chop_rev !== chop_rev` lights the
+button. Version-1 projects (slice numbers) are migrated in `mpc_chop()`
+(`pads_migrate`).
+
+**Voices** (32). A trigger builds the voice's play list straight from the
+phrase for the pad's region (`mpc_region_list` into the voice's `VLIST` area):
+positions relative to the region start, notes clipped to it, held notes
+included when "Held notes" is on, reversed if the pad is. Swing and timing
+compression are applied to that copy (they move notes *earlier* as well as
+later, which can't be done once a note's time has come).
 Each block a voice advances `pos` by `rate × samples` and emits list entries
 in `[pos, pos+dp)` at exact sample times. Loops wrap; one-shots end at the
 slice end. Rate combines time mode, stretch, fit and tape.
@@ -147,6 +158,12 @@ sounding pair sends that pair's note-off first, and a note-off only goes out
 if its note still owns the pair - so nothing can hang. Owner = voice index,
 +64 (`TAIL`) for delay repeats, which releasing/choking a pad does not cut.
 Pass-through MIDI goes through the queue too, so all output is time-ordered.
+
+**Diagnostics.** `@block` counts blocks (`blk_count`), incoming MIDI
+(`diag_in_n`) and outgoing note-ons (`diag_out_n`), and records the last empty
+pad played (`diag_empty`, `diag_empty_n`). The panel turns these into the
+AUDIO / IN / OUT lights and messages (`u_watch`), so the owner can say where
+the signal stops.
 
 **Transport.** Starting, stopping or jumping (loop/seek, detected against the
 predicted beat) sends all notes off and stops voices; stopping also finishes a
@@ -171,10 +188,11 @@ The structure tests fail if 3 or 4 disagree with 1.
 
 ## Adding a pad setting
 
-Add a `PF_*` field (stride `P_ST` = 16, 14 used) in `mpc_consts()`, its default
-in `mpc_pad_default()`, a `T_PAD` control, and use it in the engine. Pads are
-saved as a block, so old projects load the new field as 0 - make 0 a sensible
-value or handle it.
+The pad record is **full** (`P_ST` = 16, all used). A new field means growing
+`P_ST`, which changes the saved layout: bump the `@serialize` version (now 2)
+and read older versions with the old stride. Then add the `PF_*` field in
+`mpc_consts()`, its default in `mpc_pad_default()`, a `T_PAD` control, and use
+it in the engine.
 
 ## Not yet verified inside REAPER
 

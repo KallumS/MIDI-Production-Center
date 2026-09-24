@@ -1,7 +1,9 @@
 # 0005. Each voice plays its own copy of its slice
 
 Date: 2026-09-24
-Status: Accepted
+Status: Accepted; partly superseded by [0008](0008-pads-own-regions-transfer.md)
+(voices now build their list from the pad's own region instead of copying a
+per-slice list).
 
 ## Context
 
