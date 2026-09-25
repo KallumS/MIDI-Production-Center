@@ -47,11 +47,18 @@ straight away.
 2. **Chop it** with the buttons under the title: *Transient* (a slice at every
    hit, *Sensitivity* decides how many), *Grid* (every 1/16, 1/8, … bar),
    *Equal* (n equal parts) or *Markers* (your own chop points).
-3. **Play the pads.** Click them with the mouse, play them from a MIDI
+3. **Press TRANSFER TO PADS.** This fills the pads of the bank you're looking
+   at with the current chops, in order (more than 16 carry on into the next
+   bank). The pads then keep those chops: changing the chop settings
+   afterwards doesn't change the pads until you transfer again (the button
+   lights up red to remind you). A newly loaded phrase is transferred to
+   bank A automatically. You can transfer different chops into different
+   banks - e.g. transients in bank A, a 1/8 grid in bank B.
+4. **Play the pads.** Click them with the mouse, play them from a MIDI
    keyboard, or draw notes in a MIDI item on the plug-in's track. Bank A is
    notes 36-51 (C2-D#3 in REAPER's naming); banks B, C and D carry on upwards
    (52, 68 and 84).
-4. **Shape it** on the **PAD** page (per pad) and the **FX** page (effects for
+5. **Shape it** on the **PAD** page (per pad) and the **FX** page (effects for
    every pad that has *Send to FX* on).
 
 ## Getting a phrase in
@@ -88,25 +95,28 @@ Good to know:
 
 ## The screen
 
-- **Header** - phrase name and details, **SAMPLE**, **LOAD ITEM**, **PANIC**
-  (stops every note).
+- **Header** - phrase name and details, three status lights (see *No sound?*
+  below), **SAMPLE**, **LOAD ITEM**, **PANIC** (stops every note).
 - **Chop bar** - chop mode and its setting, *Held notes* (include notes that are
-  still sounding from before a chop point, like audio would), and *Edit as
-  markers* (turns the current chops into markers you can move).
+  still sounding from before a chop point, like audio would), *Edit as
+  markers* (turns the current chops into markers you can move), and
+  **TRANSFER TO PADS**.
 - **Phrase view** - the notes, the slices (coloured, labelled with the pad that
-  plays them) and a playhead for every sounding pad.
-  - Click a slice to hear it. **Drag a slice onto a pad** to put it there.
+  plays them), the selected pad's part (lighter, underlined), and a playhead
+  for every sounding pad.
+  - Click a slice to hear it. **Drag a slice onto a pad** to put just that one
+    there.
   - In *Markers* mode: **double-click** to add a marker, **drag** to move it,
     **right-click** to delete. Markers snap to nearby notes or the 1/16 grid;
     hold **Shift** to place them freely.
 - **Pads** - 4 banks of 16, laid out like an MPC (pad 1 bottom-left). Click
   to play (higher up the pad = louder). **Right-click** to copy / paste / reset
-  a pad, make it play the whole phrase, or mute it.
+  a pad, make it play the whole phrase, or empty it. Empty pads show "-".
 - **PAD page** - settings for the selected pad:
 
   | Control | Meaning |
   | --- | --- |
-  | Slice | which slice the pad plays (or *Whole phrase*) |
+  | Slice | pick one of the current slices to put on this pad (or *Whole phrase*) |
   | Trigger note / Learn | the MIDI note that plays the pad; *Learn* then hit a key |
   | Play mode | *One shot* plays to the end · *Gate* stops when you let go · *Loop (hold)* loops while held · *Loop (toggle)* first hit starts, second stops |
   | Poly | off = hitting the pad again restarts it; on = hits overlap |
@@ -140,6 +150,37 @@ means "from the lowest to the highest note in this pad's slice", so a low-pass
 at 50% always keeps the bottom half of whatever the pad plays - handy when
 different pads cover different ranges.
 
+## No sound?
+
+First, check the three lights at the top of the plug-in:
+
+| Light | Meaning |
+| --- | --- |
+| **AUDIO** | Green = REAPER is running the plug-in. Red = it isn't, so nothing can play. |
+| **IN** | Flashes when MIDI arrives at the plug-in (a key, or a note in a MIDI item). |
+| **OUT** | Flashes when the plug-in sends a note to the instrument. |
+
+Then work down this list:
+
+1. **AUDIO is red.** REAPER isn't processing the track. Check that audio is
+   working (*Options → Preferences → Audio → Device*), and that the plug-in
+   isn't bypassed or offline. If it only turns green while REAPER is playing,
+   press play before clicking pads.
+2. **Clicking a pad does nothing and OUT doesn't flash.** The pad may be
+   empty (it shows "-" and a message says so): press **TRANSFER TO PADS**.
+3. **Playing a keyboard: IN never flashes.** MIDI isn't reaching the track:
+   arm the track for recording, set its input to your keyboard (or *All MIDI
+   inputs*), and turn record monitoring on.
+4. **Playing from a MIDI item: IN flashes but OUT doesn't.** The item's notes
+   must be pad notes (36 upwards - see the pad labels) and must land on pads
+   that aren't empty. A message names any empty pad that gets played.
+5. **OUT flashes but you hear nothing.** The problem is after the plug-in: an
+   instrument must come **after** MIDI Production Center in the *same* track's
+   FX chain (ReaSynth is a quick test), and the track must not be muted.
+
+If none of that helps, tell me which lights come on when you click a pad and
+when you play a note.
+
 ## Limits
 
 8,192 notes per phrase · 64 slices · 64 pads · 32 pads sounding at once ·
@@ -147,18 +188,22 @@ different pads cover different ranges.
 
 ## Status
 
-This is a first version. It was built and tested outside REAPER with an EEL2
-interpreter (see `tests/`), which checks the notes it produces - 118 checks on
-the plug-in and 22 on the loader scripts - but it has not yet been run inside
-REAPER itself. If something doesn't work, the most useful thing to report is:
+This is an early version. It is tested outside REAPER with an EEL2
+interpreter (see `tests/`), which checks the notes it produces - 137 checks on
+the plug-in and 22 on the loader scripts. The first try inside REAPER didn't
+produce sound, and the cause isn't known yet; the status lights were added to
+find it. If something doesn't work, the most useful things to report are:
 
 - any red error text at the top of the plug-in window (REAPER shows the first
-  problem there), or
+  problem there),
+- which of the AUDIO / IN / OUT lights come on, and
 - what you did, what you expected, and what happened.
 
 ## For developers
 
-See [CLAUDE.md](CLAUDE.md) for the design and the JSFX rules it follows, and
+See [CLAUDE.md](CLAUDE.md) for the design and the JSFX rules it follows,
+[docs/adr/](docs/adr/README.md) for why the big decisions were made,
+[docs/sessions/](docs/sessions/) for a log of each working session, and
 [tests/README.md](tests/README.md) for running the tests:
 
 ```

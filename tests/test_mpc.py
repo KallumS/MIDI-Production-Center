@@ -89,7 +89,19 @@ def run(h, blocks, script=None, start=None, tempo=120.0):
     return ev
 
 
+def call(h, fn, *args):
+    """Calls a plug-in function directly."""
+    return h.ip.call(fn, [('num', float(a)) for a in args], None)
+
+
+def xfer(h, first_pad=0):
+    """Presses TRANSFER TO PADS (as the panel does, via @block)."""
+    h.ip.g['ui_req_xfer'] = float(first_pad + 1)
+    h.block(BL); h._abs += BL
+
+
 def mk(setup=(), notes=None, length=4.0, markers=(), chop=1, grid=3):
+    """A plug-in with `notes` loaded, chopped as asked and transferred to pads."""
     h = fresh()
     h._abs = BL
     if notes is not None:
@@ -99,6 +111,7 @@ def mk(setup=(), notes=None, length=4.0, markers=(), chop=1, grid=3):
     for n, v in setup:
         sl(h, n, v)
     h.block(BL); h._abs += BL
+    xfer(h)
     return h
 
 
@@ -237,11 +250,12 @@ def main():
 
     held = [(0, 4, 48, 90, 0), (1, 0.5, 72, 100, 0)]
     h = mk(notes=held, length=4, chop=1, grid=3)
-    fn = [mem(h, S + i * ST + 5) for i in range(4)]
-    check('held notes included in the slices they cross', fn == [1, 2, 1, 1], fn)
-    sl(h, 5, 0); h.block(BL)
-    fn = [mem(h, S + i * ST + 5) for i in range(4)]
-    check('held notes excluded when switched off', fn == [1, 1, 0, 0], fn)
+    ev = hit(h, 37, blocks=60)                      # slice 2: beats 1..2
+    check('held notes included in the slices they cross', sorted(e[2] for e in ons(ev)) == [48, 72], ons(ev))
+    check('... cut to the slice length', offs(ev) and max(e[0] for e in offs(ev)) <= BEAT + 1, offs(ev))
+    sl(h, 5, 0); h.block(BL); h._abs += BL
+    ev = hit(h, 37, blocks=60)
+    check('held notes excluded when switched off', [e[2] for e in ons(ev)] == [72], ons(ev))
 
     # -------------------------------------------------------------- playback
     section('pads and playback')
@@ -319,11 +333,12 @@ def main():
           [e[2] for e in ons(ev)])
 
     h = mk(notes=LINE, length=8, chop=1, grid=4)
-    pad_set(h, 0, 'PF_SLICE', -1)
+    call(h, 'mpc_pad_set_slice', 0, -1)
     check('slice -1 plays the whole phrase', len(ons(hit(h, 36, blocks=800))) == 8)
-    pad_set(h, 0, 'PF_SLICE', 64)
-    check('slice beyond the chops is silent', len(ons(hit(h, 36))) == 0)
-    pad_set(h, 0, 'PF_SLICE', 0); pad_set(h, 0, 'PF_CHAN', 5)
+    call(h, 'mpc_pad_set_slice', 0, 64)
+    check('an empty pad is silent', len(ons(hit(h, 36))) == 0)
+    check('... and reports which pad was empty', g(h, 'diag_empty') == 1)
+    call(h, 'mpc_pad_set_slice', 0, 0); pad_set(h, 0, 'PF_CHAN', 5)
     check('pad output channel', all(e[4] == 4 for e in ons(hit(h, 36))))
 
     ev = run(h, 5, {0: [note_on(0, 100, 90), note_off(10, 100)]})
@@ -417,6 +432,44 @@ def main():
     ev = fx([(44, 1), (45, 9), (46, 10), (47, 2)], notes=[(0, 1, p, 100, 0) for p in (69, 70, 71, 73)])
     check('pitch correct A minor pentatonic, down', [e[2] for e in ons(ev)] == [69, 69, 69, 72] or
           sorted(e[2] for e in ons(ev)) == [69, 72], ons(ev))
+
+    # ------------------------------------------------------ transfer to pads
+    section('transfer to pads')
+    h = fresh(); h._abs = BL
+    load(h, LINE, 8); h._abs += BL
+    check('a new phrase is transferred to the pads automatically',
+          pad_get(h, 0, 'PF_SLICE') == 0 and pad_get(h, 7, 'PF_SLICE') == 7 and pad_get(h, 8, 'PF_SLICE') == 64,
+          [pad_get(h, p, 'PF_SLICE') for p in range(10)])
+    sl(h, 1, 1); sl(h, 3, 4); h.block(BL); h._abs += BL                  # grid 1/2 -> 4 slices
+    check('re-chopping does not change the pads by itself', pad_get(h, 7, 'PF_SLICE') == 7 and g(h, 'slice_n') == 4)
+    check('... and the transfer button shows the chops changed', g(h, 'xfer_chop_rev') != g(h, 'chop_rev'))
+    ev = hit(h, 36, blocks=60)
+    check('... pad A01 still plays its old region (beat 0..1)', [e[2] for e in ons(ev)] == [60], ons(ev))
+    xfer(h)
+    check('transfer fills the pads with the current chops',
+          [pad_get(h, p, 'PF_SLICE') for p in range(5)] == [0, 1, 2, 3, 64])
+    check('... empties the rest of the bank', all(pad_get(h, p, 'PF_E') == 0 for p in range(4, 16)))
+    check('... and the button is no longer lit', g(h, 'xfer_chop_rev') == g(h, 'chop_rev'))
+    ev = hit(h, 36, blocks=120)
+    check('pad A01 now plays the new first slice (beats 0..2)', [e[2] for e in ons(ev)] == [60, 61], ons(ev))
+    sl(h, 3, 2); h.block(BL); h._abs += BL                               # grid 1/8 -> 16 slices
+    xfer(h, first_pad=16)
+    check('transfer into bank B leaves bank A alone',
+          [pad_get(h, p, 'PF_SLICE') for p in (0, 3, 16, 31)] == [0, 3, 0, 15])
+    sl(h, 3, 1); h.block(BL); h._abs += BL                               # grid 1/16 -> 32 slices
+    xfer(h, first_pad=32)
+    check('more than 16 slices carry on into the next bank',
+          pad_get(h, 47, 'PF_SLICE') == 15 and pad_get(h, 48, 'PF_SLICE') == 16 and pad_get(h, 63, 'PF_SLICE') == 31)
+    check('transfer keeps other pad settings', pad_get(h, 0, 'PF_LEVEL') == 100 and pad_get(h, 0, 'PF_NOTE') == 36)
+
+    # ------------------------------------------------------------ diagnostics
+    section('status lights')
+    h = mk(notes=LINE, length=8, chop=1, grid=4)
+    b0, i0, o0 = g(h, 'blk_count'), g(h, 'diag_in_n'), g(h, 'diag_out_n')
+    run(h, 3, {0: [note_on(0, 36, 100)]})
+    check('blocks are counted (AUDIO light)', g(h, 'blk_count') == b0 + 3)
+    check('incoming MIDI is counted (IN light)', g(h, 'diag_in_n') == i0 + 1)
+    check('outgoing notes are counted (OUT light)', g(h, 'diag_out_n') > o0)
 
     # ------------------------------------------------------------- stutter
     section('stutter')
@@ -539,6 +592,31 @@ def main():
     check('markers restored', h2.ip.g['mark_ui_n'] == 1 and h2.ip.g['slice_n'] == 2)
     check('pad settings restored', pad_get(h2, 7, 'PF_TRANS') == 5 and pad_get(h2, 3, 'PF_NOTE') == 70)
     check('restored phrase is not replaced by the demo', h2.ip.sget(h2.ip.nstr('#src_name')) == 'test')
+
+    check('pad regions restored', pad_get(h2, 0, 'PF_E') == pad_get(h, 0, 'PF_E') > 0)
+    h3 = Host(JSFX)                   # @init first (demo queued for transfer), then the project
+    pad_set(h, 0, 'PF_S', 1.5); pad_set(h, 0, 'PF_E', 2.5)
+    h3.load_state(h.save_state())
+    h3.block(BL)
+    check('opening a project never overwrites its saved pads',
+          pad_get(h3, 0, 'PF_S') == 1.5 and pad_get(h3, 0, 'PF_E') == 2.5)
+
+    # a project saved by version 1 kept a slice number per pad, not a region
+    h = mk(notes=LINE, length=8, chop=1, grid=4)
+    state = h.save_state()
+    n, m = int(state[1]), int(state[6 + int(state[1]) * 5])
+    pads = 6 + n * 5 + 1 + m
+    state[0] = 1.0
+    for p in range(64):
+        state[pads + p * 16 + 0] = float(3 - p if p < 3 else 64)    # pads 0..2 -> slices 3, 2, 1
+        state[pads + p * 16 + 14] = state[pads + p * 16 + 15] = 0.0
+    h2 = Host(JSFX)                   # @init first (loads the demo), then the project
+    h2.load_state(state)
+    sl(h2, 1, 1); sl(h2, 3, 4)        # REAPER restores sliders itself
+    h2.block(BL)
+    check('version 1 projects: pads get the regions of their old slices',
+          pad_get(h2, 0, 'PF_S') == 6 and pad_get(h2, 0, 'PF_E') == 8 and pad_get(h2, 2, 'PF_S') == 2
+          and not call(h2, 'mpc_pad_has', 3), [pad_get(h2, p, 'PF_S') for p in range(4)])
 
     # ----------------------------------------------------------------- UI
     section('panel')

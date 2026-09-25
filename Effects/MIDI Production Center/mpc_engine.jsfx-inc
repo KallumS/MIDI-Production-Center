@@ -91,6 +91,7 @@ function mpc_q_run() local(endt, i, n, cnt, e, j, k, m, off, s)
       s[0] ? midisend(off, $x80 | e[3], e[4], 0);
       midisend(off, $x90 | e[3], e[4], e[5]);
       s[0] = e[6]; s[1] = e[7];
+      diag_out_n += 1;
     ) : e[2] == QT_OFF ? (
       s = SOUND + (e[3] * 128 + e[4]) * 3;
       s[0] === e[6] ? (
@@ -99,6 +100,7 @@ function mpc_q_run() local(endt, i, n, cnt, e, j, k, m, off, s)
       );
     ) : (
       midisend(off, e[3], e[4], e[5]);
+      (e[3] & $xF0) == $x90 ? diag_out_n += 1;
     );
     mpc_q_free(i);
     j += 1;
@@ -433,12 +435,15 @@ function mpc_voice_alloc(t) local(i, best, age)
   best;
 );
 
-// Starts pad p at absolute time t. `note` is what releases it later.
-function mpc_trigger(p, vel, t, note) local(a, si, sl, i, vv, op, v, lst, fo, n, rev, L, k, q, warp)
+// Starts pad p at absolute time t. `note` is what releases it later. An empty
+// pad does nothing but is reported (diag_empty) so the panel can say why.
+function mpc_trigger(p, vel, t, note) local(a, i, vv, op, v, lst, n, rev, S, E, L, k, q, warp)
 (
   a = PAD + p * P_ST;
-  si = mpc_pad_slice(p);
-  si >= 0 ? (
+  S = a[PF_S]; E = a[PF_E];
+  E - S <= EPS ? (
+    diag_empty = p + 1; diag_empty_n += 1;
+  ) : (
     a[PF_MODE] == MODE_TOGGLE && mpc_pad_active(p) ? (
       mpc_pad_stop(p, t);
     ) : (
@@ -455,13 +460,10 @@ function mpc_trigger(p, vel, t, note) local(a, si, sl, i, vv, op, v, lst, fo, n,
       );
       v = mpc_voice_alloc(t);
       vv = VOICE + v * V_ST;
-      sl = SLICE + si * SL_ST;
       rev = a[PF_REV] ? 1 : 0;
-      fo = rev ? sl[SF_RO] : sl[SF_FO];
-      n = min(rev ? sl[SF_RN] : sl[SF_FN], VL_MAX);
-      L = sl[SF_E] - sl[SF_S];
+      L = E - S;
       lst = mpc_vlist(v);
-      memcpy(lst, LIST + fo * L_ST, n * L_ST);
+      n = mpc_region_list(lst, VL_MAX, S, E, rev);
       // groove is baked into the voice's own copy of the list
       warp = (a[PF_FX] && p_cmp && p_cmp_tgt == 2) + 2 * (p_swing > 50);
       warp ? (
@@ -478,9 +480,9 @@ function mpc_trigger(p, vel, t, note) local(a, si, sl, i, vv, op, v, lst, fo, n,
       vv[V_ON] = 1; vv[V_PAD] = p; vv[V_T] = t; vv[V_N] = n; vv[V_L] = L;
       vv[V_LOOP] = a[PF_MODE] == MODE_LOOP || a[PF_MODE] == MODE_TOGGLE;
       vv[V_VEL] = vel; vv[V_NOTE] = note; vv[V_HELD] = 1;
-      vv[V_LO] = sl[SF_LO]; vv[V_HI] = sl[SF_HI];
+      vv[V_LO] = rl_lo; vv[V_HI] = rl_hi;
       vv[V_AGE] = t; vv[V_FX] = a[PF_FX]; vv[V_REV] = rev;
-      vv[V_SLICE] = si; vv[V_S] = sl[SF_S];
+      vv[V_SLICE] = a[PF_SLICE]; vv[V_S] = S;
       st_engaged && a[PF_FX] ? mpc_stut_begin(v);
       PADHIT[p] = t;
     );
@@ -677,6 +679,11 @@ function mpc_block() local(playing, ofs, m1, m2, m3, st, ch, t, beat, hit, i, wa
 
   mpc_import_check();
   mpc_chop_if_needed();
+  ui_req_xfer ? (
+    // "transfer to pads" from the panel: done here, after the latest chop
+    xfer_count = mpc_transfer(ui_req_xfer - 1, 0);
+    ui_req_xfer = 0; xfer_done += 1;
+  );
 
   // requests from the panel (which runs on another thread)
   ui_req_panic ? ( ui_req_panic = 0; mpc_panic(); );
@@ -691,6 +698,7 @@ function mpc_block() local(playing, ofs, m1, m2, m3, st, ch, t, beat, hit, i, wa
   while (midirecv(ofs, m1, m2, m3)) (
     t = mpc_now + ofs;
     st = m1 & $xF0; ch = m1 & $x0F;
+    diag_in_n += 1;
     beat = beat_position + ofs / srate * tempo / 60;
     st == $x90 && m3 > 0 ? (
       cap_armed ? (
