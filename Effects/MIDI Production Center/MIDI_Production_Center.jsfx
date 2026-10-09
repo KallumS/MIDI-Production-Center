@@ -15,7 +15,7 @@ tags: MIDI sampler chopper pads MPC slicer
 //
 // Put it before an instrument on a track. See README.md for the full guide.
 //
-// Copyright (c) 2026 KallumS. MIT licence (see LICENSE).
+// Copyright (c) 2026 KallumS. GPL v3 (see LICENSE).
 
 in_pin:none
 out_pin:none

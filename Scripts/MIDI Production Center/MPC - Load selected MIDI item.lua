@@ -5,7 +5,7 @@
 --   to the MIDI Production Center on the item's track, or to the one whose
 --   window is focused. Several items become one phrase, starting at the first.
 --
--- Copyright (c) 2026 KallumS. MIT licence (see LICENSE).
+-- Copyright (c) 2026 KallumS. GPL v3 (see LICENSE).
 
 local dir = ({ reaper.get_action_context() })[2]:match("^(.*[/\\])")
 local lib = dofile(dir .. "mpc_loader_lib.lua")

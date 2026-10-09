@@ -6,7 +6,7 @@
 -- plug-in through shared memory (gmem namespace "MIDIProductionCenter"). The
 -- layout is documented next to mpc_import_check() in mpc_engine.jsfx-inc.
 --
--- Copyright (c) 2026 KallumS. MIT licence (see LICENSE).
+-- Copyright (c) 2026 KallumS. GPL v3 (see LICENSE).
 
 local M = {}
 

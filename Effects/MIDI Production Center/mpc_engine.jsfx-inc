@@ -5,7 +5,7 @@
 // Timing model: one absolute sample clock (mpc_now). Everything is scheduled
 // in absolute samples and only turned into a block offset when sent.
 //
-// Copyright (c) 2026 KallumS. MIT licence (see LICENSE).
+// Copyright (c) 2026 KallumS. GPL v3 (see LICENSE).
 
 @init
 

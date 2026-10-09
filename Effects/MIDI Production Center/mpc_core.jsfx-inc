@@ -7,7 +7,7 @@
 // No function may call one declared after it (EEL2 has no recursion or
 // forward references), so the order in this file matters.
 //
-// Copyright (c) 2026 KallumS. MIT licence (see LICENSE).
+// Copyright (c) 2026 KallumS. GPL v3 (see LICENSE).
 
 @init
 

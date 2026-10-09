@@ -13,7 +13,7 @@ REAPER runs failed on compile-time rules the interpreter didn't enforce.
 ## Decision
 
 - Reuse Midular's interpreter (owned by the same author; now under this repo's
-  MIT licence) in `tests/`, extended with `gmem`, `@serialize` round-trips and
+  GPL v3 licence) in `tests/`, extended with `gmem`, `@serialize` round-trips and
   a scriptable `gfx_showmenu`.
 - Add **static checks** for what REAPER rejects at compile time: calling a
   function declared later (or recursively), wrong argument counts, scientific

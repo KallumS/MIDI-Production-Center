@@ -7,7 +7,7 @@
 // @gfx runs on its own thread: it only writes pad settings, markers, sliders
 // and ui_req_* flags, and the audio thread picks those up in @block.
 //
-// Copyright (c) 2026 KallumS. MIT licence (see LICENSE).
+// Copyright (c) 2026 KallumS. GPL v3 (see LICENSE).
 
 @init
 

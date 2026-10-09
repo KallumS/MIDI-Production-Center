@@ -6,7 +6,7 @@
 --   available, add it to your startup actions (e.g. with SWS "Startup action"
 --   or a __startup.lua script).
 --
--- Copyright (c) 2026 KallumS. MIT licence (see LICENSE).
+-- Copyright (c) 2026 KallumS. GPL v3 (see LICENSE).
 
 local _, script, section, cmd = reaper.get_action_context()
 local dir = script:match("^(.*[/\\])")

@@ -213,4 +213,4 @@ lua5.4  tests/test_loader.lua   # the loader scripts
 
 ## Licence
 
-MIT - see [LICENSE](LICENSE).
+GNU General Public License v3 - see [LICENSE](LICENSE).
