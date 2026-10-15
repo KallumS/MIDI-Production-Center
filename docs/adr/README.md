@@ -15,6 +15,7 @@ status.
 | [0006](0006-note-scheduler.md) | One output scheduler that owns every note | Accepted |
 | [0007](0007-test-harness.md) | Verify with an EEL2 interpreter plus static checks | Accepted |
 | [0008](0008-pads-own-regions-transfer.md) | Pads hold their own regions; "transfer to pads" | Accepted |
+| [0009](0009-window-text-follows-apples-writing-guidelines.md) | The window's text follows Apple's writing guidelines | Accepted |
 
 ## Template
 
