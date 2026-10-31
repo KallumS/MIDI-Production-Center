@@ -104,6 +104,11 @@ the gmem loader scripts ([ADR 0002](docs/adr/0002-phrase-loading.md)).
 - `tempo`, `beat_position`, `play_state` are not valid in `@gfx`.
 - `sliderchange(-1)` from `@gfx` = undo point + project marked dirty
   (`u_changed()`). Call it after every user edit.
+- **Text on screen follows Apple's writing guidelines** (ADR 0009): title
+  style for buttons, tabs, labels and menu items, sentence case for messages,
+  words not abbreviations, em dashes and curly quotes (UTF-8 in the source),
+  header messages kept to about forty characters. Never rename the sliders
+  "Chop Mode" or "Instance ID" - the loader finds the plug-in by them.
 
 ## Architecture
 

@@ -9,9 +9,9 @@ play them. The effects work on the notes themselves:
 | **Filter** | Removes notes from the top (low-pass) or bottom (high-pass) of the pitch range, keeps a band (band-pass) or cuts one out (notch). *Slope* fades notes out over a range instead of removing them. *Resonance* makes notes right at the cutoff louder. |
 | **EQ** | Low shelf, mid bell and high shelf. Each one raises or lowers the velocity of notes in its part of the keyboard. |
 | **Compressor** | Pulls things closer together. Target **Velocity**: loud notes are brought down towards the threshold (with makeup). **Pitch**: notes far from the middle of the pad are pulled towards it. **Timing**: notes are pulled towards the 1/16 grid. |
-| **Delay** | Repeats each note, in time with the project. *Feedback* fades each repeat, *Pitch step* transposes each repeat (try +7 or +12), *Mix* balances the original against the echoes. |
-| **Stutter** | Beat-repeat: grabs the short window the pads are currently in and repeats it. *Decay* and *Pitch step* change each repeat. Hold the on-screen button, automate it, or assign a MIDI key to it. |
-| **Pitch correct** | Snaps notes to a key and scale (12 scales), to the nearest note, up, down, or removes out-of-key notes. |
+| **Delay** | Repeats each note, in time with the project. *Feedback* fades each repeat, *Pitch Step* transposes each repeat (try +7 or +12), *Mix* balances the original against the echoes. |
+| **Stutter** | Beat-repeat: grabs the short window the pads are currently in and repeats it. *Decay* and *Pitch Step* change each repeat. Hold the on-screen button, automate it, or assign a MIDI key to it. |
+| **Pitch Correction** | Snaps notes to a key and scale (12 scales), to the nearest note, up, down, or removes out-of-key notes. |
 
 It is a **JSFX** plug-in, so there is nothing to compile or install beyond
 copying files, and it works on Windows, macOS and Linux.
@@ -47,7 +47,7 @@ straight away.
 2. **Chop it** with the buttons under the title: *Transient* (a slice at every
    hit, *Sensitivity* decides how many), *Grid* (every 1/16, 1/8, … bar),
    *Equal* (n equal parts) or *Markers* (your own chop points).
-3. **Press TRANSFER TO PADS.** This fills the pads of the bank you're looking
+3. **Click Transfer to Pads.** This fills the pads of the bank you're looking
    at with the current chops, in order (more than 16 carry on into the next
    bank). The pads then keep those chops: changing the chop settings
    afterwards doesn't change the pads until you transfer again (the button
@@ -66,10 +66,10 @@ straight away.
 JSFX plug-ins can't open files or have things dragged onto them, so there are
 three ways to load MIDI, all of which take a few seconds:
 
-**A. LOAD ITEM button (easiest once set up).** Run the action
+**A. Load Item button (easiest once set up).** Run the action
 *MPC - Loader (background)* once per session (it stays running quietly; run it
-again to stop it). Then select any MIDI item in REAPER and click **LOAD ITEM**
-in the plug-in. The header shows "loader: on" while the helper is running.
+again to stop it). Then select any MIDI item in REAPER and click **Load Item**
+in the plug-in. The header shows “Loader on” while the helper is running.
 To have it start with REAPER, add it to your startup actions (SWS extension:
 *Extensions → Startup actions*).
 
@@ -78,10 +78,10 @@ To have it start with REAPER, add it to your startup actions (SWS extension:
 open, otherwise the one on the item's track, otherwise the only one in the
 project. Several items become one phrase.
 
-**C. SAMPLE (like sampling on an MPC).** Put the MIDI you want on the
-plug-in's own track, click **SAMPLE**, press play in REAPER and stop when
+**C. Sample (like sampling on an MPC).** Put the MIDI you want on the
+plug-in's own track, click **Sample**, press play in REAPER and stop when
 you're done. Everything that arrives on the track while playing is recorded
-(and you hear it). Click SAMPLE again before playing to cancel.
+(and you hear it). Click Sample again before playing to cancel.
 
 Good to know:
 
@@ -96,11 +96,11 @@ Good to know:
 ## The screen
 
 - **Header** - phrase name and details, three status lights (see *No sound?*
-  below), **SAMPLE**, **LOAD ITEM**, **PANIC** (stops every note).
-- **Chop bar** - chop mode and its setting, *Held notes* (include notes that are
+  below), **Sample**, **Load Item**, **Panic** (stops every note).
+- **Chop bar** - chop mode and its setting, *Held Notes* (include notes that are
   still sounding from before a chop point, like audio would), *Edit as
   markers* (turns the current chops into markers you can move), and
-  **TRANSFER TO PADS**.
+  **Transfer to Pads**.
 - **Phrase view** - the notes, the slices (coloured, labelled with the pad that
   plays them), the selected pad's part (lighter, underlined), and a playhead
   for every sounding pad.
@@ -117,35 +117,35 @@ Good to know:
   | Control | Meaning |
   | --- | --- |
   | Slice | pick one of the current slices to put on this pad (or *Whole phrase*) |
-  | Trigger note / Learn | the MIDI note that plays the pad; *Learn* then hit a key |
-  | Play mode | *One shot* plays to the end · *Gate* stops when you let go · *Loop (hold)* loops while held · *Loop (toggle)* first hit starts, second stops |
+  | Trigger Note / Learn | the MIDI note that plays the pad; *Learn* then hit a key |
+  | Play Mode | *One Shot* plays to the end · *Gate* stops when you let go · *Loop (Hold)* loops while held · *Loop (Toggle)* first hit starts, second stops |
   | Poly | off = hitting the pad again restarts it; on = hits overlap |
-  | Choke group | pads in the same group cut each other off (like open/closed hi-hats) |
+  | Choke Group | pads in the same group cut each other off (like open/closed hi-hats) |
   | Transpose | semitones up or down |
-  | Tape speed | transposing also changes speed, like a tape or an MPC without warp |
+  | Tape Speed | transposing also changes speed, like a tape or an MPC without warp |
   | Stretch | 200% plays half speed, 50% double speed - pitch is untouched |
-  | Fit to | squeezes/stretches the slice to exactly 1/2 … 32 beats |
+  | Fit To | squeezes/stretches the slice to exactly 1/2 … 32 beats |
   | Reverse | plays the slice backwards (note lengths are kept) |
   | Send to FX | whether this pad goes through the FX page |
-  | Level / Vel. sens | volume, and how much hitting the pad harder makes it louder |
-  | Out channel | force a MIDI channel for this pad (default: keep the phrase's own) |
+  | Level / Velocity Sensitivity | volume, and how much hitting the pad harder makes it louder |
+  | Output Channel | force a MIDI channel for this pad (default: keep the phrase's own) |
 
 - **FX page** - the six effects, top to bottom in the order they run. Click the
   square on the left of an effect to switch it on, or the name to edit it.
-- **SETUP page** - *Time mode* (follow the project tempo, or play at the
+- **Setup page** - *Time Mode* (follow the project tempo, or play at the
   phrase's original tempo), *Swing* (50% straight → 66% triplet feel),
-  *Pitch axis* (see below), *Thru other notes* (notes that aren't pad notes
+  *Pitch Axis* (see below), *Thru Other Notes* (notes that aren't pad notes
   pass straight to the instrument), output channel, master level, and buttons
   to reset pads or reload the demo.
 
-Knobs: drag up/down, hold **Ctrl/Cmd** for fine moves, **double-click** to
+Knobs: drag up/down, hold **Command** (Ctrl on Windows) for fine moves, **double-click** to
 reset, or use the mouse wheel. Every setting can be automated in REAPER (they
 are listed under the FX window's **Param** button).
 
-### Pitch axis: absolute or relative
+### Pitch Axis: Absolute or Relative
 
 The filter and EQ treat pitch like frequency. With **Absolute**, the cutoff is
-a real note (e.g. remove everything above C4). With **Relative to pad**, 0-100%
+a real note (e.g. remove everything above C4). With **Relative**, 0-100%
 means "from the lowest to the highest note in this pad's slice", so a low-pass
 at 50% always keeps the bottom half of whatever the pad plays - handy when
 different pads cover different ranges.
@@ -156,25 +156,25 @@ First, check the three lights at the top of the plug-in:
 
 | Light | Meaning |
 | --- | --- |
-| **AUDIO** | Green = REAPER is running the plug-in. Red = it isn't, so nothing can play. |
-| **IN** | Flashes when MIDI arrives at the plug-in (a key, or a note in a MIDI item). |
-| **OUT** | Flashes when the plug-in sends a note to the instrument. |
+| **Audio** | Green = REAPER is running the plug-in. Red = it isn't, so nothing can play. |
+| **In** | Flashes when MIDI arrives at the plug-in (a key, or a note in a MIDI item). |
+| **Out** | Flashes when the plug-in sends a note to the instrument. |
 
 Then work down this list:
 
-1. **AUDIO is red.** REAPER isn't processing the track. Check that audio is
+1. **Audio is red.** REAPER isn't processing the track. Check that audio is
    working (*Options → Preferences → Audio → Device*), and that the plug-in
    isn't bypassed or offline. If it only turns green while REAPER is playing,
    press play before clicking pads.
-2. **Clicking a pad does nothing and OUT doesn't flash.** The pad may be
-   empty (it shows "-" and a message says so): press **TRANSFER TO PADS**.
-3. **Playing a keyboard: IN never flashes.** MIDI isn't reaching the track:
+2. **Clicking a pad does nothing and Out doesn't flash.** The pad may be
+   empty (it shows “—” and a message says so): click **Transfer to Pads**.
+3. **Playing a keyboard: In never flashes.** MIDI isn't reaching the track:
    arm the track for recording, set its input to your keyboard (or *All MIDI
    inputs*), and turn record monitoring on.
-4. **Playing from a MIDI item: IN flashes but OUT doesn't.** The item's notes
+4. **Playing from a MIDI item: In flashes but Out doesn't.** The item's notes
    must be pad notes (36 upwards - see the pad labels) and must land on pads
    that aren't empty. A message names any empty pad that gets played.
-5. **OUT flashes but you hear nothing.** The problem is after the plug-in: an
+5. **Out flashes but you hear nothing.** The problem is after the plug-in: an
    instrument must come **after** MIDI Production Center in the *same* track's
    FX chain (ReaSynth is a quick test), and the track must not be muted.
 
@@ -196,7 +196,7 @@ find it. If something doesn't work, the most useful things to report are:
 
 - any red error text at the top of the plug-in window (REAPER shows the first
   problem there),
-- which of the AUDIO / IN / OUT lights come on, and
+- which of the Audio / In / Out lights come on, and
 - what you did, what you expected, and what happened.
 
 ## For developers

@@ -85,8 +85,8 @@ function M.choose_target(items)
   end
   local all = M.find_instances()
   if #all == 0 then
-    return nil, "No MIDI Production Center found in this project.\n\n" ..
-                "Add \"JS: MIDI Production Center\" to a track first."
+    return nil, "There’s no MIDI Production Center in this project.\n\n" ..
+                "Add “JS: MIDI Production Center” to a track, then try again."
   end
   if items and items[1] then
     local tr = reaper.GetMediaItem_Track(items[1].item)
@@ -95,9 +95,9 @@ function M.choose_target(items)
     end
   end
   if #all == 1 then return all[1] end
-  return nil, "There is more than one MIDI Production Center in this project.\n\n" ..
-              "Open the one you want to load into (so its window is focused), " ..
-              "or put it on the same track as the MIDI item, then run this again."
+  return nil, "There’s more than one MIDI Production Center in this project.\n\n" ..
+              "Open the one you want to load into, so its window is in front, " ..
+              "or put it on the same track as the MIDI item, then try again."
 end
 
 function M.find_by_id(id)

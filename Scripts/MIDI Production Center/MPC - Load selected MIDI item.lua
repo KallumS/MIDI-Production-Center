@@ -26,14 +26,14 @@ end
 
 local phrase = lib.read_phrase(items)
 if #phrase.notes == 0 then
-  reaper.MB("The selected item has no (unmuted) notes to load.", TITLE, 0)
+  reaper.MB("The selected item has no notes to load.\n\nMuted notes aren’t loaded. Select an item with notes in it, then run this action again.", TITLE, 0)
   return
 end
 
 local seq, dropped = lib.send(target.id, phrase)
 if dropped > 0 then
-  reaper.MB(string.format("The phrase has %d notes; only the first %d were loaded.",
-    #phrase.notes, lib.MAX_NOTES), TITLE, 0)
+  reaper.MB(string.format("Only the first %d of the phrase’s %d notes were loaded.",
+    lib.MAX_NOTES, #phrase.notes), TITLE, 0)
 end
 
 -- The plug-in picks the phrase up on its next audio block. Wait briefly for
@@ -45,9 +45,9 @@ local function wait()
     return
   end
   if reaper.time_precise() - started > 3 then
-    reaper.MB("The plug-in didn't pick up the phrase.\n\n" ..
-      "It only runs while REAPER's audio engine is running. Check that audio is on " ..
-      "(and that the plug-in isn't bypassed or offline), then try again - or press play once.",
+    reaper.MB("The plug-in didn’t pick up the phrase.\n\n" ..
+      "It only runs while REAPER’s audio engine is running. Check that audio is on " ..
+      "and the plug-in isn’t bypassed or offline, then try again — or press Play once.",
       TITLE, 0)
     return
   end
