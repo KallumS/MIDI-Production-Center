@@ -20,6 +20,14 @@ copying files, and it works on Windows, macOS and Linux.
 
 ## Install
 
+**With ReaPack** (easiest, and it keeps it up to date): Extensions ->
+ReaPack -> Import repositories, paste
+`https://raw.githubusercontent.com/KallumS/MIDI-Production-Center/main/index.xml`,
+then Browse packages, find MIDI Production Center and Install. Install both the plug-in and the loader scripts. That link only works
+once this has been merged into the main branch.
+
+**By hand:**
+
 1. Download this repository (green **Code** button → **Download ZIP**) and unzip it.
 2. In REAPER choose **Options → Show REAPER resource path in explorer/finder**.
 3. Copy the **`Effects`** and **`Scripts`** folders from the download into that
