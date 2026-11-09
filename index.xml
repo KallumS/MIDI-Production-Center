@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ReaPack index for MIDI Production Center.
+
+  Add this repository in REAPER with Extensions > ReaPack > Import repositories,
+  pasting the raw URL of this file on the default branch:
+
+    https://raw.githubusercontent.com/KallumS/MIDI-Production-Center/main/index.xml
+
+  That URL only resolves once this file is on the default branch.
+
+  Each <source> is pinned to a commit rather than a branch, so an installed
+  version is the exact set of files that was tested and cannot change
+  underneath anyone. Publishing a new version means adding a <version> block
+  with a fresh commit hash - never editing an existing one.
+
+  Two packages: the JSFX with the three files it imports by name, and the
+  loader scripts with the library they load from beside themselves. The JSFX
+  and scripts talk through shared memory, so they need not share a folder.
+
+  ReaPack keys an installed package by its NAME, so renaming a file is not an
+  upgrade. Rename sparingly.
+-->
+<index version="1" name="MIDI Production Center">
+  <category name="MIDI">
+
+    <reapack name="MIDI_Production_Center.jsfx" type="effect" desc="MIDI Production Center">
+      <version name="1.0" author="kallums" time="2026-10-31T23:22:54Z">
+        <changelog><![CDATA[First release through ReaPack. An MPC-style 16-pad sampler whose samples are MIDI: load a phrase, chop it into slices, put them on pads and play them, through a filter, EQ, compressor, delay, stutter and pitch correction that work on the notes themselves.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/KallumS/MIDI-Production-Center/29dfb37c08b2e20504914a026482a3b152302126/Effects/MIDI%20Production%20Center/MIDI_Production_Center.jsfx</source>
+        <source file="mpc_core.jsfx-inc">https://raw.githubusercontent.com/KallumS/MIDI-Production-Center/29dfb37c08b2e20504914a026482a3b152302126/Effects/MIDI%20Production%20Center/mpc_core.jsfx-inc</source>
+        <source file="mpc_engine.jsfx-inc">https://raw.githubusercontent.com/KallumS/MIDI-Production-Center/29dfb37c08b2e20504914a026482a3b152302126/Effects/MIDI%20Production%20Center/mpc_engine.jsfx-inc</source>
+        <source file="mpc_ui.jsfx-inc">https://raw.githubusercontent.com/KallumS/MIDI-Production-Center/29dfb37c08b2e20504914a026482a3b152302126/Effects/MIDI%20Production%20Center/mpc_ui.jsfx-inc</source>
+      </version>
+      <metadata>
+        <description><![CDATA[{\pard MIDI Production Center\par
+An MPC-style 16-pad sampler for REAPER, except the samples are MIDI. Load a MIDI phrase, chop it into slices, put the slices on pads and play them.\par
+Filter, EQ, compressor, delay, stutter and pitch correction all work on the notes. Install the loader scripts too: LOAD ITEM needs them.\par
+}]]></description>
+        <link rel="website">https://github.com/KallumS/MIDI-Production-Center</link>
+      </metadata>
+    </reapack>
+
+    <reapack name="MIDI Production Center loader" type="script" desc="MIDI Production Center - loader scripts">
+      <version name="1.0" author="kallums" time="2026-10-31T23:22:54Z">
+        <changelog><![CDATA[First release through ReaPack. Two actions for the MIDI Production Center JSFX: one loads the selected MIDI item once; the other runs in the background and makes the plug-in's LOAD ITEM button work.]]></changelog>
+        <source main="main" file="MPC - Load selected MIDI item.lua">https://raw.githubusercontent.com/KallumS/MIDI-Production-Center/29dfb37c08b2e20504914a026482a3b152302126/Scripts/MIDI%20Production%20Center/MPC%20-%20Load%20selected%20MIDI%20item.lua</source>
+        <source main="main" file="MPC - Loader (background).lua">https://raw.githubusercontent.com/KallumS/MIDI-Production-Center/29dfb37c08b2e20504914a026482a3b152302126/Scripts/MIDI%20Production%20Center/MPC%20-%20Loader%20%28background%29.lua</source>
+        <source file="mpc_loader_lib.lua">https://raw.githubusercontent.com/KallumS/MIDI-Production-Center/29dfb37c08b2e20504914a026482a3b152302126/Scripts/MIDI%20Production%20Center/mpc_loader_lib.lua</source>
+      </version>
+      <metadata>
+        <description><![CDATA[{\pard MIDI Production Center - loader scripts\par
+Loader scripts for the MIDI Production Center JSFX.\par
+MPC - Load selected MIDI item loads the selected MIDI item once. MPC - Loader (background) runs in the background so the plug-in's LOAD ITEM button works.\par
+}]]></description>
+        <link rel="website">https://github.com/KallumS/MIDI-Production-Center</link>
+      </metadata>
+    </reapack>
+
+  </category>
+</index>
