@@ -18,6 +18,8 @@ copying files, and it works on Windows, macOS and Linux.
 
 ---
 
+**In Ableton Live:** `ableton/` has MIDI Production Center as a Max for Live MIDI effect. See [`ableton/README.md`](ableton/README.md).
+
 ## Install
 
 **With ReaPack** (easiest, and it keeps it up to date): Extensions ->

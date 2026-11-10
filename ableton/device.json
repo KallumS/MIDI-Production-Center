@@ -1,0 +1,30 @@
+{
+  "name": "MIDI Production Center",
+  "slug": "MIDIProductionCenter",
+  "kind": "midi",
+  "template": "jsfx_midi",
+  "width": 260,
+  "hello": "Show Window opens MIDI Production Center's own window.",
+  "device": {
+    "main": "MIDI_Production_Center.jsfx"
+  },
+  "files": {
+    "MIDI_Production_Center.jsfx": "../Effects/MIDI Production Center/MIDI_Production_Center.jsfx",
+    "mpc_core.jsfx-inc": "../Effects/MIDI Production Center/mpc_core.jsfx-inc",
+    "mpc_engine.jsfx-inc": "../Effects/MIDI Production Center/mpc_engine.jsfx-inc",
+    "mpc_ui.jsfx-inc": "../Effects/MIDI Production Center/mpc_ui.jsfx-inc"
+  },
+  "buttons": [
+    [
+      "Load Clip",
+      "loadClip"
+    ]
+  ],
+  "scripts": [
+    "kit/runtime/jsfx.js",
+    "kit/gfx.js",
+    "kit/live.js",
+    "actions.js",
+    "kit/jsfx_device.js"
+  ]
+}
