@@ -31,7 +31,7 @@ Everything MIDI Production Center saves in REAPER (its @serialize: the phrase, t
 ableton/device.json` writes the `.amxd`, the `.maxpat` and the script bundle
 `MIDIProductionCenter.js`. The bundle is Middaw's EEL2 runtime, the plug-in and its includes from `Effects/MIDI Production Center/`, the shared window (`ableton/kit/jsfx_device.js`, `gfx.js`) and `ableton/actions.js`, the loaders' part. See `ableton/kit/VENDORED.md`.
 
-`node --test ableton/tests/test_device.js` runs the device on a pretend Max and Live: the window draws and answers clicks all over it, notes go through and end, Load Clip and the window's own Load each chop a clip onto the pads through the loader's mailbox, a missing clip is reported to the window, and the state is saved and comes back. `node ableton/kit/test/shot.js ableton/MIDIProductionCenter.js 1000 660 out.png` draws the window.
+`node --test ableton/tests/test_device.js` runs the device on a pretend Max and Live: the window draws and answers clicks all over it, notes go through and end, Load Clip and the window's own Load each chop a clip onto the pads through the loader's mailbox, a missing clip is reported to the window, and the state is saved and comes back. `node ableton/window.js` redraws the picture above from the device's own drawing code (it needs Playwright's Chromium).
 
 ## Limits
 
